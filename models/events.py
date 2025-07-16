@@ -1,14 +1,13 @@
 from typing import Optional, List
-from sqlmodel import SQLModel, Field, JSON, Column
+from pydantic import BaseModel, Field
 
 
-class Event(SQLModel, table = True):
-    id: Optional[int] = Field(default = None, primary_key = True)
+class Event(BaseModel):
     title: str
-    image: str
-    description: str
-    tags: List[str] = Field(sa_column=Column(JSON))
-    location: str
+    image: Optional[str]
+    description: Optional[str]
+    tags: Optional[List[str]] 
+    location: Optional[str]
 
     class Config:
         schema_extra = {
@@ -20,7 +19,7 @@ class Event(SQLModel, table = True):
                 "location": "Google Meet"
             }
         }
-class EventUpdate(SQLModel):
+class EventUpdate(BaseModel):
     title: Optional[str]
     image: Optional[str]
     description: Optional[str]

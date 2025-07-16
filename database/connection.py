@@ -1,14 +1,7 @@
-from sqlmodel import SQLModel, Session, create_engine
-from models.events import Event
+from pymongo import MongoClient
+import os
 
-database_file = "planner.db"
-database_connection_string = f"sqlite:///{database_file}"
-connect_args = {"check_same_thread": False}
-engine_url = create_engine(database_connection_string, echo=True, connect_args=connect_args)
+Mongo_URL = os.getenv("Mongo_URL", "mongodb://localhost:27017/")
+client = MongoClient(Mongo_URL)
+db = client["planner_db"]
 
-def conn():
-    SQLModel.metadata.create_all(engine_url)
-
-def get_session():
-    with Session(engine_url) as session:
-        yield session

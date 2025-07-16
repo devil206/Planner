@@ -1,27 +1,28 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
-from models.events import Event
-from database.connection import get_session
+from fastapi import APIRouter, HTTPException, status
+from database.connection import db
 from models.events import Event, EventUpdate
-from sqlmodel import select
+from bson.objectid import ObjectId
+from typing import List
 
 event_router = APIRouter(
     tags=["Events"]
 )
+events_collection = db["events"]
 
-events = []
 
 @event_router.get("/", response_model=List[Event])
-async def retrieve_all_events(session = Depends(get_session)) -> List[Event]:
-    statement = select(Event)
-    events = session.exec(statement).all()
+def retrieve_all_events():
+    events = list(events_collection.find({},{"_id":0}))
     return events
 
 
 @event_router.get("/{id}", response_model=Event)
-async def retrieve_event(id: int, session = Depends(get_session)) -> Event:
-        event = session.get(Event, id)
+def retrieve_event(id: str):
+        event = events_collection.find_one({"_id": ObjectId(id)})
         if event:
+            event["id"] = str(event["_id"])
+            del event["_id"]
             return event
         
         raise HTTPException(
@@ -31,28 +32,30 @@ async def retrieve_event(id: int, session = Depends(get_session)) -> Event:
 
 
 
-@event_router.post("/new")
-async def create_event(new_event: Event,
-session = Depends(get_session)) -> dict:
-    session.add(new_event)
-    session.commit()
-    session.refresh(new_event)
+
+@event_router.post("/new", response_model=dict)
+def create_event(new_event: Event):
+    event_dict = new_event.dict()
+    result = events_collection.insert_one(event_dict)
     return {
-        "message": "Event created successfully"
+        "message": "Event created successfully",
+        "event_id": str(result.inserted_id)
     }
 
 
 @event_router.delete("/{id}")
-async def delete_event(id: int) -> dict:
-    for event in events:
+def delete_event(event_id: str):
+    result = events_collection.delete_one({"_id":ObjectId(event_id)})
 
-        if event.id == id:
-            events.remove(event)
-
-            return {
-                "message": "Event deleted successfully."
-                }
-    raise HTTPException(
+    if result.deleted_count ==0:
+    
+        raise HTTPException(
         status_code= status.HTTP_404_NOT_FOUND,
         detail = "Event with the supplied Id does not exist"
     )
+    return{"message": "Event deleted"}
+
+@event_router.delete("/")
+def delete_all_events():
+     result = events_collection.delete_many({})
+     return {"message":f"Deleted {result.deleted_count} events"}
