@@ -1,5 +1,5 @@
 
-from models.events import Event
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
